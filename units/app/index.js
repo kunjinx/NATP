@@ -36,7 +36,7 @@ module.exports = function (options) {
     app.use(bodyParser());
 
 // add nunjucks as view:
-    app.use(templating('app/views', {
+    app.use(templating(__dirname + '/views', {
         noCache: !isProduction,
         watch: !isProduction
     }));
@@ -45,6 +45,6 @@ module.exports = function (options) {
     app.use(controller());
 
     app.listen(options.port);
-    log.info('app started at port 3000...');
+    log.info('app started at port ', options.port);
 
 }
