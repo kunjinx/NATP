@@ -10,16 +10,26 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "gits://github.com/kunjinx/NATP.git"
+    "url": "git@github.com:kunjinx/NATP.git"
+  },
+  "yargs": {
+    "duplicate-arguments-array": false
   },
   "dependencies": {
+    "bluebird": "^3.5.1",
     "chalk": "^2.4.1",
+    "eventemitter3": "^3.1.0",
     "koa": "^2.5.2",
     "koa-bodyparser": "3.2.0",
     "koa-router": "7.0.0",
-    "mime": "1.3.4",
-    "mz": "2.4.0",
-    "nunjucks": "2.4.2"
+    "lodash": "^4.17.10",
+    "mime": "^1.3.4",
+    "mz": "^2.4.0",
+    "nunjucks": "2.4.2",
+    "please-update-dependencies": "^2.0.0",
+    "protobufjs": "^3.8.2",
+    "uuid": "^3.3.2",
+    "yargs": "^6.6.0"
   },
   "engines": {
     "node": ">=7.6"
