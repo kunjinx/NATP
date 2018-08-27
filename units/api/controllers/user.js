@@ -1,18 +1,18 @@
-var util = require('util')
+const util = require('util')
 
-var _ = require('lodash')
-var Promise = require('bluebird')
-var uuid = require('uuid')
+const _ = require('lodash')
+const Promise = require('bluebird')
+const uuid = require('uuid')
 
-var dbapi = require('../../../db/api')
-var logger = require('../../../util/logger')
-var datautil = require('../../../util/datautil')
-var deviceutil = require('../../../util/deviceutil')
-var wire = require('../../../wire/index')
-var wireutil = require('../../../wire/util')
-var wirerouter = require('../../../wire/router')
+const dbapi = require('../../../db/api')
+const logger = require('../../../util/logger')
+const datautil = require('../../../util/datautil')
+const deviceutil = require('../../../util/deviceutil')
+const wire = require('../../../wire/index')
+const wireutil = require('../../../wire/util')
+const wirerouter = require('../../../wire/router')
 
-var log = logger.createLogger('api:controllers:user')
+const log = logger.createLogger('api:controllers:user')
 
 module.exports = {
     getUser: getUser
@@ -33,17 +33,17 @@ function getUser(req, res) {
 }
 
 function getUserDevices(req, res) {
-    var fields = req.swagger.params.fields.value
+    let fields = req.swagger.params.fields.value
 
     dbapi.loadUserDevices(req.user.email)
         .then(function (cursor) {
             return Promise.promisify(cursor.toArray, cursor)()
                 .then(function (list) {
-                    var deviceList = []
+                    let deviceList = []
 
                     list.forEach(function (device) {
                         datautil.normalize(device, req.user)
-                        var responseDevice = device
+                        let responseDevice = device
                         if (fields) {
                             responseDevice = _.pick(device, fields.split(','))
                         }
@@ -65,8 +65,8 @@ function getUserDevices(req, res) {
 }
 
 function getUserDeviceBySerial(req, res) {
-    var serial = req.swagger.params.serial.value
-    var fields = req.swagger.params.fields.value
+    let serial = req.swagger.params.serial.value
+    let fields = req.swagger.params.fields.value
 
     dbapi.loadDevice(serial)
         .then(function (device) {
@@ -85,7 +85,7 @@ function getUserDeviceBySerial(req, res) {
                 })
             }
 
-            var responseDevice = device
+            let responseDevice = device
             if (fields) {
                 responseDevice = _.pick(device, fields.split(','))
             }
@@ -104,8 +104,8 @@ function getUserDeviceBySerial(req, res) {
 }
 
 function addUserDevice(req, res) {
-    var serial = req.body.serial
-    var timeout = req.body.timeout || null
+    let serial = req.body.serial
+    let timeout = req.body.timeout || null
 
     dbapi.loadDevice(serial)
         .then(function (device) {
@@ -125,7 +125,7 @@ function addUserDevice(req, res) {
             }
 
             // Timer will be called if no JoinGroupMessage is received till 5 seconds
-            var responseTimer = setTimeout(function () {
+            let responseTimer = setTimeout(function () {
                 req.options.channelRouter.removeListener(wireutil.global, messageListener)
                 return res.status(504).json({
                     success: false
@@ -133,7 +133,7 @@ function addUserDevice(req, res) {
                 })
             }, 5000)
 
-            var messageListener = wirerouter()
+            let messageListener = wirerouter()
                 .on(wire.JoinGroupMessage, function (channel, message) {
                     if (message.serial === serial && message.owner.email === req.user.email) {
                         clearTimeout(responseTimer)
@@ -148,7 +148,7 @@ function addUserDevice(req, res) {
                 .handler()
 
             req.options.channelRouter.on(wireutil.global, messageListener)
-            var usage = 'automation'
+            let usage = 'automation'
 
             req.options.push.send([
                 device.channel
@@ -180,7 +180,7 @@ function addUserDevice(req, res) {
 }
 
 function deleteUserDeviceBySerial(req, res) {
-    var serial = req.swagger.params.serial.value
+    let serial = req.swagger.params.serial.value
 
     dbapi.loadDevice(serial)
         .then(function (device) {
@@ -200,7 +200,7 @@ function deleteUserDeviceBySerial(req, res) {
             }
 
             // Timer will be called if no JoinGroupMessage is received till 5 seconds
-            var responseTimer = setTimeout(function () {
+            let responseTimer = setTimeout(function () {
                 req.options.channelRouter.removeListener(wireutil.global, messageListener)
                 return res.status(504).json({
                     success: false
@@ -208,7 +208,7 @@ function deleteUserDeviceBySerial(req, res) {
                 })
             }, 5000)
 
-            var messageListener = wirerouter()
+            let messageListener = wirerouter()
                 .on(wire.LeaveGroupMessage, function (channel, message) {
                     if (message.serial === serial && message.owner.email === req.user.email) {
                         clearTimeout(responseTimer)
@@ -247,7 +247,7 @@ function deleteUserDeviceBySerial(req, res) {
 }
 
 function remoteConnectUserDeviceBySerial(req, res) {
-    var serial = req.swagger.params.serial.value
+    let serial = req.swagger.params.serial.value
 
     dbapi.loadDevice(serial)
         .then(function (device) {
@@ -266,11 +266,11 @@ function remoteConnectUserDeviceBySerial(req, res) {
                 })
             }
 
-            var responseChannel = 'txn_' + uuid.v4()
+            let responseChannel = 'txn_' + uuid.v4()
             req.options.sub.subscribe(responseChannel)
 
             // Timer will be called if no JoinGroupMessage is received till 5 seconds
-            var timer = setTimeout(function () {
+            let timer = setTimeout(function () {
                 req.options.channelRouter.removeListener(responseChannel, messageListener)
                 req.options.sub.unsubscribe(responseChannel)
                 return res.status(504).json({
@@ -279,7 +279,7 @@ function remoteConnectUserDeviceBySerial(req, res) {
                 })
             }, 5000)
 
-            var messageListener = wirerouter()
+            let messageListener = wirerouter()
                 .on(wire.ConnectStartedMessage, function (channel, message) {
                     if (message.serial === serial) {
                         clearTimeout(timer)
@@ -313,7 +313,7 @@ function remoteConnectUserDeviceBySerial(req, res) {
 }
 
 function remoteDisconnectUserDeviceBySerial(req, res) {
-    var serial = req.swagger.params.serial.value
+    let serial = req.swagger.params.serial.value
 
     dbapi.loadDevice(serial)
         .then(function (device) {
@@ -332,11 +332,11 @@ function remoteDisconnectUserDeviceBySerial(req, res) {
                 })
             }
 
-            var responseChannel = 'txn_' + uuid.v4()
+            let responseChannel = 'txn_' + uuid.v4()
             req.options.sub.subscribe(responseChannel)
 
             // Timer will be called if no JoinGroupMessage is received till 5 seconds
-            var timer = setTimeout(function () {
+            let timer = setTimeout(function () {
                 req.options.channelRouter.removeListener(responseChannel, messageListener)
                 req.options.sub.unsubscribe(responseChannel)
                 return res.status(504).json({
@@ -345,7 +345,7 @@ function remoteDisconnectUserDeviceBySerial(req, res) {
                 })
             }, 5000)
 
-            var messageListener = wirerouter()
+            let messageListener = wirerouter()
                 .on(wire.ConnectStoppedMessage, function (channel, message) {
                     if (message.serial === serial) {
                         clearTimeout(timer)
@@ -383,7 +383,7 @@ function getUserAccessTokens(req, res) {
         .then(function (cursor) {
             return Promise.promisify(cursor.toArray, cursor)()
                 .then(function (list) {
-                    var titles = []
+                    let titles = []
                     list.forEach(function (token) {
                         titles.push(token.title)
                     })

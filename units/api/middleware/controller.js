@@ -1,6 +1,6 @@
 const fs = require('fs');
 const logger = require('../../../util/logger');
-const log = logger.createLogger('app:middleware:controller');
+const log = logger.createLogger('api');
 
 // add url-route in /controllers:
 
