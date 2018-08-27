@@ -2,7 +2,7 @@ var r = require('rethinkdb')
 var util = require('util')
 
 var db = require('./index')
-var wireutil = require('.././util')
+var wireutil = require('../wire/util')
 
 var dbapi = Object.create(null)
 

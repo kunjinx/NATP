@@ -1,7 +1,7 @@
 var r = require('rethinkdb')
 var Promise = require('bluebird')
 
-var logger = require('.././logger')
+var logger = require('../util/logger')
 var tables = require('./tables')
 
 module.exports = function (conn) {

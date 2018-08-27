@@ -2,9 +2,9 @@ var r = require('rethinkdb')
 var Promise = require('bluebird')
 
 var setup = require('./setup')
-var logger = require('.././logger')
-var lifecycle = require('.././lifecycle')
-var srv = require('.././srv')
+var logger = require('../util/logger')
+var lifecycle = require('../util/lifecycle')
+var srv = require('../util/srv')
 
 var db = module.exports = Object.create(null)
 var log = logger.createLogger('db')
