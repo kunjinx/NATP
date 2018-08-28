@@ -1,98 +1,55 @@
-var r = require('rethinkdb')
-var Promise = require('bluebird')
+const Sequelize = require('sequelize');
+const conn = require('./conn');
+var fs = require('fs');
+var Promise = require('bluebird');
 
-var logger = require('../util/logger')
-var tables = require('./tables')
+const sequelize = new Sequelize(conn.dbname, conn.user, conn.pwd, conn.options);
+var tables = fs.readdirSync('./db/tables');
+var db = Object.create(null);
 
-module.exports = function (conn) {
-    var log = logger.createLogger('db:setup')
-
-    function alreadyExistsError(err) {
-        return err.msg && err.msg.indexOf('already exists') !== -1
-    }
-
-    function noMasterAvailableError(err) {
-        return err.msg && err.msg.indexOf('No master available') !== -1
-    }
-
-    function createDatabase() {
-        return r.dbCreate(conn.db).run(conn)
-            .then(function () {
-                log.info('Database "%s" created', conn.db)
-            })
-            .catch(alreadyExistsError, function () {
-                log.info('Database "%s" already exists', conn.db)
-                return Promise.resolve()
-            })
-    }
-
-    function createIndex(table, index, options) {
-        var args = [index]
-        var rTable = r.table(table)
-
-        if (options) {
-            if (options.indexFunction) {
-                args.push(options.indexFunction)
-            }
-            if (options.options) {
-                args.push(options.options)
-            }
-        }
-
-        return rTable.indexCreate.apply(rTable, args).run(conn)
-            .then(function () {
-                log.info('Index "%s"."%s" created', table, index)
-            })
-            .catch(alreadyExistsError, function () {
-                log.info('Index "%s"."%s" already exists', table, index)
-                return Promise.resolve()
-            })
-            .then(function () {
-                log.info('Waiting for index "%s"."%s"', table, index)
-                return r.table(table).indexWait(index).run(conn)
-            })
-            .then(function () {
-                log.info('Index "%s"."%s" is ready', table, index)
-                return Promise.resolve()
-            })
-            .catch(noMasterAvailableError, function () {
-                return Promise.delay(1000).then(function () {
-                    return createIndex(table, index, options)
-                })
-            })
-    }
-
-    function createTable(table, options) {
-        var tableOptions = {
-            primaryKey: options.primaryKey
-        }
-        return r.tableCreate(table, tableOptions).run(conn)
-            .then(function () {
-                log.info('Table "%s" created', table)
-            })
-            .catch(alreadyExistsError, function () {
-                log.info('Table "%s" already exists', table)
-                return Promise.resolve()
-            })
-            .catch(noMasterAvailableError, function () {
-                return Promise.delay(1000).then(function () {
-                    return createTable(table, options)
-                })
-            })
-            .then(function () {
-                if (options.indexes) {
-                    return Promise.all(Object.keys(options.indexes).map(function (index) {
-                        return createIndex(table, index, options.indexes[index])
-                    }))
+module.exports = function () {
+    for (i in tables) {
+        var table = require('./tables/' + tables[i]);
+        var tableName = tables[i].split('.')[0];
+        db[tableName] = Object.create(null);
+        var defaultOptions = {
+            timestamps: false,
+            freezeTableName: true,
+            charset: 'utf8'
+        };
+        var Options;
+        for (key in table) {
+            if (typeof (table[key]) != 'function') {
+                if (key.indexOf('Options') != -1) {
+                    Options = table[key];
+                    continue;
                 }
-            })
+                ;
+                db[tableName][key] = sequelize.define(tableName + '_' + key, table[key], Options);
+                Options = defaultOptions;
+            } else {
+                db[tableName].association = table[key];
+            }
+        }
+        table.association(db[tableName]);
     }
+    ;
+    db.initialTables = function () {
+        return sequelize.sync({logging: false})
+            .then(() => {
+                console.log('Initialing tables successfully!');//后面更换成后台日志
+            })
+            .catch(err => {
 
-    return createDatabase()
-        .then(function () {
-            return Promise.all(Object.keys(tables).map(function (table) {
-                return createTable(table, tables[table])
-            }))
-        })
-        .return(conn)
+                if (err) {
+                    console.log('Failed to initial tables! Info--%s : %s', err.name, err.message);
+                }
+                return Promise.delay(2000).then(() => {
+                    db.initialTables()
+                });
+            });
+    }
+    return db;
 }
+
+
