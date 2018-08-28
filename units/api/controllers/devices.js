@@ -32,11 +32,10 @@ module.exports = {
             let device = await dbapi.loadDevice(serial);
             if (!device) {
                 ctx.response.status(404);
-                ctx.rest({
+                return ctx.rest({
                     success: false
                     , description: 'Device not found'
                 });
-                return;
             }
             datautil.normalize(device, ctx.user);
             ctx.rest({
