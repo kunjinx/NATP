@@ -20,7 +20,7 @@ module.exports = {
             });
         } catch (err) {
             log.error('Failed to load device list: ', err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
@@ -31,7 +31,7 @@ module.exports = {
         try {
             let device = await dbapi.loadDevice(serial);
             if (!device) {
-                ctx.response.status(404);
+                ctx.response.status = 404;
                 return ctx.rest({
                     success: false
                     , description: 'Device not found'
@@ -44,7 +44,7 @@ module.exports = {
             });
         } catch (err) {
             log.error('Failed to load device "%s": ', ctx.params.serial, err.stack)
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })

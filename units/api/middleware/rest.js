@@ -13,7 +13,7 @@ module.exports = {
                 ctx.rest = (data) => {
                     ctx.response.type = 'application/json';
                     ctx.response.body = data;
-                }
+                };
                 try {
                     await next();
                 } catch (e) {

@@ -12,18 +12,19 @@ const wirerouter = require('../../../wire/router');
 const log = logger.createLogger('api:controllers:user');
 
 module.exports = {
-    'GET /api/user': getUser
-    , 'GET /api/user/devices': getUserDevices
-    , 'POST /api/user/devices': addUserDevice
-    , 'GET /api/user/devices/:serial': getUserDeviceBySerial
-    , 'DELETE /api/user/devices/:serial': deleteUserDeviceBySerial
-    , 'POST /user/devices/:serial/remoteConnect': remoteConnectUserDeviceBySerial
-    , 'DELETE /user/devices/:serial/remoteConnect': remoteDisconnectUserDeviceBySerial
-    , 'GET /user/accessTokenAuth': getUserAccessTokens
+    'GET /api/user': getUser()
+    , 'GET /api/user/devices': getUserDevices()
+    , 'POST /api/user/devices': addUserDevice()
+    , 'GET /api/user/devices/:serial': getUserDeviceBySerial()
+    , 'DELETE /api/user/devices/:serial': deleteUserDeviceBySerial()
+    , 'POST /api/user/devices/:serial/remoteConnect': remoteConnectUserDeviceBySerial()
+    , 'DELETE /api/user/devices/:serial/remoteConnect': remoteDisconnectUserDeviceBySerial()
+    , 'GET /api/user/accessTokenAuth': getUserAccessTokens()
 };
 
 function getUser() {
     return async(ctx, next) => {
+        log.info(ctx.user);
         ctx.rest({
             success: true
             , user: ctx.user
@@ -47,7 +48,7 @@ function getUserDevices() {
             });
         } catch (err) {
             log.error('Failed to load device list: ', err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
@@ -61,7 +62,7 @@ function getUserDeviceBySerial() {
         try {
             let device = await dbapi.loadDevice(serial);
             if (!device) {
-                ctx.response.status(404);
+                ctx.response.status = 404;
                 return ctx.rest({
                     success: false
                     , description: 'Device not found'
@@ -69,7 +70,7 @@ function getUserDeviceBySerial() {
             }
             datautil.normalize(device, ctx.user);
             if (!deviceutil.isOwnedByUser(device, ctx.user)) {
-                ctx.response.status(403);
+                ctx.response.status = 403;
                 return ctx.rest({
                     success: false
                     , description: 'Device is not owned by you'
@@ -81,7 +82,7 @@ function getUserDeviceBySerial() {
             });
         } catch (err) {
             log.error('Failed to load device "%s": ', ctx.params.serial, err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
@@ -96,7 +97,7 @@ function addUserDevice() {
             let timeout = ctx.request.body.timeout || null;
             let device = dbapi.loadDevice(serial);
             if (!device) {
-                ctx.response.status(404);
+                ctx.response.status = 404;
                 return ctx.rest({
                     success: false
                     , description: 'Device not found'
@@ -104,7 +105,7 @@ function addUserDevice() {
             }
             datautil.normalize(device, ctx.user);
             if (!deviceutil.isAddable(device, ctx.user)) {
-                ctx.response.status(403);
+                ctx.response.status = 403;
                 return ctx.rest({
                     success: false
                     , description: 'Device is being used or not available'
@@ -113,7 +114,7 @@ function addUserDevice() {
             // Timer will be called if no JoinGroupMessage is received till 5 seconds
             let responseTimer = setTimeout(function () {
                 ctx.options.channelRouter.removeListener(wireutil.global, messageListener);
-                ctx.response.status(504);
+                ctx.response.status = 504;
                 return ctx.rest({
                     success: false
                     , description: 'Device is not responding'
@@ -160,7 +161,7 @@ function addUserDevice() {
 
         } catch (err) {
             log.error('Failed to load device "%s": ', ctx.request.body.serial, err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
@@ -174,7 +175,7 @@ function deleteUserDeviceBySerial() {
             let serial = ctx.params.serial;
             let device = dbapi.loadDevice(serial);
             if (!device) {
-                ctx.response.status(404);
+                ctx.response.status = 404;
                 return ctx.rest({
                     success: false
                     , description: 'Device not found'
@@ -182,7 +183,7 @@ function deleteUserDeviceBySerial() {
             }
             datautil.normalize(device, ctx.user);
             if (!deviceutil.isOwnedByUser(device, ctx.user)) {
-                ctx.response.status(403);
+                ctx.response.status = 403;
                 return ctx.rest({
                     success: false
                     , description: 'You cannot release this device. Not owned by you'
@@ -191,7 +192,7 @@ function deleteUserDeviceBySerial() {
             // Timer will be called if no JoinGroupMessage is received till 5 seconds
             let responseTimer = setTimeout(function () {
                 ctx.options.channelRouter.removeListener(wireutil.global, messageListener);
-                ctx.response.status(504);
+                ctx.response.status = 504;
                 return ctx.rest({
                     success: false
                     , description: 'Device is not responding'
@@ -229,7 +230,7 @@ function deleteUserDeviceBySerial() {
             ])
         } catch (err) {
             log.error('Failed to load device "%s": ', ctx.params.serial, err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
@@ -243,7 +244,7 @@ function remoteConnectUserDeviceBySerial() {
             let serial = ctx.params.serial;
             let device = dbapi.loadDevice(serial);
             if (!device) {
-                ctx.response.status(404);
+                ctx.response.status = 404;
                 return ctx.rest({
                     success: false
                     , description: 'Device not found'
@@ -251,7 +252,7 @@ function remoteConnectUserDeviceBySerial() {
             }
             datautil.normalize(device, ctx.user);
             if (!deviceutil.isOwnedByUser(device, ctx.user)) {
-                ctx.response.status(403);
+                ctx.response.status = 403;
                 return ctx.rest({
                     success: false
                     , description: 'Device is not owned by you or is not available'
@@ -264,7 +265,7 @@ function remoteConnectUserDeviceBySerial() {
             let timer = setTimeout(function () {
                 ctx.options.channelRouter.removeListener(responseChannel, messageListener);
                 ctx.options.sub.unsubscribe(responseChannel);
-                ctx.response.status(504);
+                ctx.response.status = 504;
                 return ctx.rest({
                     success: false
                     , description: 'Device is not responding'
@@ -298,7 +299,7 @@ function remoteConnectUserDeviceBySerial() {
 
         } catch (err) {
             log.error('Failed to load device "%s": ', ctx.params.serial, err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
@@ -312,7 +313,7 @@ function remoteDisconnectUserDeviceBySerial() {
             let serial = ctx.params.serial;
             let device = dbapi.loadDevice(serial);
             if (!device) {
-                ctx.response.status(404);
+                ctx.response.status = 404;
                 return ctx.rest({
                     success: false
                     , description: 'Device not found'
@@ -320,7 +321,7 @@ function remoteDisconnectUserDeviceBySerial() {
             }
             datautil.normalize(device, ctx.user);
             if (!deviceutil.isOwnedByUser(device, ctx.user)) {
-                ctx.response.status(403);
+                ctx.response.status = 403;
                 return ctx.rest({
                     success: false
                     , description: 'You cannot release this device. Not owned by you'
@@ -333,7 +334,7 @@ function remoteDisconnectUserDeviceBySerial() {
             let timer = setTimeout(function () {
                 ctx.options.channelRouter.removeListener(responseChannel, messageListener);
                 ctx.options.sub.unsubscribe(responseChannel);
-                ctx.response.status(504);
+                ctx.response.status = 504;
                 return ctx.rest({
                     success: false
                     , description: 'Device is not responding'
@@ -366,7 +367,7 @@ function remoteDisconnectUserDeviceBySerial() {
             ])
         } catch (err) {
             log.error('Failed to load device "%s": ', ctx.params.serial, err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
@@ -382,17 +383,17 @@ function getUserAccessTokens() {
             let titles = [];
             list.forEach(function (token) {
                 titles.push(token.title)
-            })
+            });
             ctx.rest({
                 success: true
                 , titles: titles
             })
         } catch (err) {
             log.error('Failed to load tokens: ', err.stack);
-            ctx.response.status(500);
+            ctx.response.status = 500;
             ctx.rest({
                 success: false
             })
         }
-    };
+    }
 }
