@@ -17,7 +17,7 @@ const db = require('../../db/setup');
 module.exports = function (options) {
     let log = logger.createLogger('api');
     let app = new koa();
-    //db().initialTables();
+    db().initialTables();
     let channelRouter = new events.EventEmitter();
 
     let push = zmqutil.socket('push');

@@ -40,6 +40,9 @@ module.exports = {
         roaming: Sequelize.BOOLEAN,
         subtype: Sequelize.STRING,
         type: Sequelize.STRING,
+        state: Sequelize.STRING,
+        manual: Sequelize.STRING,
+        operator: Sequelize.STRING,
         serial: {type: Sequelize.STRING, primaryKey: true}
     },
     battery: {
@@ -82,16 +85,16 @@ module.exports = {
     },
     display: {
         density: Sequelize.FLOAT,
-        fps: Sequelize.FLOAT,
+        fps: Sequelize.DOUBLE,
         height: Sequelize.INTEGER,
         id: Sequelize.INTEGER,
         rotation: Sequelize.INTEGER,
-        secure: Sequelize.INTEGER,
-        size: Sequelize.FLOAT,
+        secure: Sequelize.BOOLEAN,
+        size: Sequelize.DOUBLE,
         url: Sequelize.STRING,
         width: Sequelize.INTEGER,
-        xdpi: Sequelize.INTEGER,
-        ydpi: Sequelize.INTEGER,
+        xdpi: Sequelize.DOUBLE,
+        ydpi: Sequelize.DOUBLE,
         serial: {type: Sequelize.STRING, primaryKey: true}
     },
     phone: {

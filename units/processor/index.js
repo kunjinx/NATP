@@ -111,77 +111,74 @@ module.exports = function (options) {
             log.info('DeviceReadyMessage', message.serial);
         })
         // Worker messages
-        /*.on(wire.JoinGroupByAdbFingerprintMessage, function (channel, message) {
-         dbapi.lookupUserByAdbFingerprint(message.fingerprint)
-         .then(function (user) {
-         if (user) {
-         devDealer.send([
-         channel
-         , wireutil.envelope(new wire.AutoGroupMessage(
-         new wire.OwnerMessage(
-         user.email
-         , user.name
-         , user.group
-         )
-         , message.fingerprint
-         ))
-         ])
-         }
-         else if (message.currentGroup) {
-         pub.send([
-         message.currentGroup
-         , wireutil.envelope(new wire.JoinGroupByAdbFingerprintMessage(
-         message.serial
-         , message.fingerprint
-         , message.comment
-         ))
-         ])
-         }
-         })
-         .catch(function (err) {
-         log.error(
-         'Unable to lookup user by ADB fingerprint "%s"'
-         , message.fingerprint
-         , err.stack
-         )
-         })
-         })
-         .on(wire.JoinGroupByVncAuthResponseMessage, function (channel, message) {
-         dbapi.lookupUserByVncAuthResponse(message.response, message.serial)
-         .then(function (user) {
-         if (user) {
-         devDealer.send([
-         channel
-         , wireutil.envelope(new wire.AutoGroupMessage(
-         new wire.OwnerMessage(
-         user.email
-         , user.name
-         , user.group
-         )
-         , message.response
-         ))
-         ])
-         }
-         else if (message.currentGroup) {
-         pub.send([
-         message.currentGroup
-         , wireutil.envelope(new wire.JoinGroupByVncAuthResponseMessage(
-         message.serial
-         , message.response
-         ))
-         ])
-         }
-         })
-         .catch(function (err) {
-         log.error(
-         'Unable to lookup user by VNC auth response "%s"'
-         , message.response
-         , err.stack
-         )
-         })
-         })*/
+        .on(wire.JoinGroupByAdbFingerprintMessage, async function (channel, message) {
+            try {
+                let user = await dbapi.lookupUserByAdbFingerprint(message.fingerprint);
+                if (user) {
+                    devDealer.send([
+                        channel
+                        , wireutil.envelope(new wire.AutoGroupMessage(
+                            new wire.OwnerMessage(
+                                user.email
+                                , user.name
+                                , user.group
+                            )
+                            , message.fingerprint
+                        ))
+                    ])
+                }
+                else if (message.currentGroup) {
+                    pub.send([
+                        message.currentGroup
+                        , wireutil.envelope(new wire.JoinGroupByAdbFingerprintMessage(
+                            message.serial
+                            , message.fingerprint
+                            , message.comment
+                        ))
+                    ])
+                }
+            } catch (err) {
+                log.error(
+                    'Unable to lookup user by ADB fingerprint "%s"'
+                    , message.fingerprint
+                    , err.stack
+                )
+            }
+        })
+        .on(wire.JoinGroupByVncAuthResponseMessage, async function (channel, message) {
+            try {
+                let user = dbapi.lookupUserByVncAuthResponse(message.response, message.serial);
+                if (user) {
+                    devDealer.send([
+                        channel
+                        , wireutil.envelope(new wire.AutoGroupMessage(
+                            new wire.OwnerMessage(
+                                user.email
+                                , user.name
+                                , user.group
+                            )
+                            , message.response
+                        ))
+                    ])
+                }
+                else if (message.currentGroup) {
+                    pub.send([
+                        message.currentGroup
+                        , wireutil.envelope(new wire.JoinGroupByVncAuthResponseMessage(
+                            message.serial
+                            , message.response
+                        ))
+                    ])
+                }
+            } catch (err) {
+                log.error(
+                    'Unable to lookup user by VNC auth response "%s"'
+                    , message.response
+                    , err.stack
+                )
+            }
+        })
         .on(wire.ConnectStartedMessage, async(channel, message, data) => {
-            //dbapi.setDeviceConnectUrl(message.serial, message.url)
             try {
                 dbapi.setDeviceConnectUrl(message.serial, message.url);
                 pub.send([channel, data])
@@ -191,7 +188,6 @@ module.exports = function (options) {
             log.info('ConnectStartedMessage', message.serial, message.url);
         })
         .on(wire.ConnectStoppedMessage, async(channel, message, data) => {
-            //dbapi.unsetDeviceConnectUrl(message.serial)
             try {
                 dbapi.unsetDeviceConnectUrl(message.serial);
                 pub.send([channel, data])
@@ -213,8 +209,6 @@ module.exports = function (options) {
             log.info('JoinGropMessage', message);
         })
         .on(wire.LeaveGroupMessage, async function (channel, message, data) {
-            /*dbapi.unsetDeviceOwner(message.serial, message.owner)
-             dbapi.unsetDeviceUsage(message.serial)*/
             log.info('LeaveGroupMessage', message);
             try {
                 dbapi.unsetDeviceOwner(message.serial, message.owner);
@@ -228,10 +222,9 @@ module.exports = function (options) {
             pub.send([channel, data])
         })
         .on(wire.DeviceIdentityMessage, async function (channel, message, data) {
-            //dbapi.saveDeviceIdentity(message.serial, message)
             log.info('DeviceIdentityMessage', message);
             try {
-                dbapi.saveDeviceIdentity(message.serial, message);
+                await dbapi.saveDeviceIdentity(message.serial, message);
                 pub.send([channel, data])
             } catch (err) {
                 log.error('saveDeviceIdentity failed:', message)
@@ -247,7 +240,6 @@ module.exports = function (options) {
             pub.send([channel, data])
         })
         .on(wire.AirplaneModeEvent, async function (channel, message, data) {
-            //dbapi.setDeviceAirplaneMode(message.serial, message.enabled)
             log.info('AirplaneModeEvent', message);
             try {
                 dbapi.setDeviceAirplaneMode(message.serial, message.enabled);
@@ -257,7 +249,6 @@ module.exports = function (options) {
             }
         })
         .on(wire.BatteryEvent, async function (channel, message, data) {
-            //dbapi.setDeviceBattery(message.serial, message)
             log.info('BatteryEvent', message);
             try {
                 dbapi.setDeviceBattery(message.serial, message);
@@ -267,7 +258,6 @@ module.exports = function (options) {
             }
         })
         .on(wire.DeviceBrowserMessage, async function (channel, message, data) {
-            //dbapi.setDeviceBrowser(message.serial, message)
             log.info('DeviceBrowsermessage', message);
             try {
                 dbapi.setDeviceBrowser(message.serial, message);
@@ -277,7 +267,6 @@ module.exports = function (options) {
             }
         })
         .on(wire.ConnectivityEvent, async function (channel, message, data) {
-            //dbapi.setDeviceConnectivity(message.serial, message)
             log.info('ConnectivityEvent', message);
             try {
                 dbapi.setDeviceConnectivity(message.serial, message);
@@ -287,7 +276,6 @@ module.exports = function (options) {
             }
         })
         .on(wire.PhoneStateEvent, async function (channel, message, data) {
-            //dbapi.setDevicePhoneState(message.serial, message)
             log.info('PhoneStateEvent', message);
             try {
                 dbapi.setDevicePhoneState(message.serial, message);
@@ -297,7 +285,6 @@ module.exports = function (options) {
             }
         })
         .on(wire.RotationEvent, async function (channel, message, data) {
-            //dbapi.setDeviceRotation(message.serial, message.rotation)
             log.info('RotationEvent', message);
             try {
                 dbapi.setDeviceRotation(message.serial, message.rotation);

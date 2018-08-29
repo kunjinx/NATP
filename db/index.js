@@ -18,8 +18,8 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     var Display = db.devices.display;
     var ReverseForwards = db.devices.reverseForwards;
     var Phone = db.devices.phone;
-    var Display = db.devices.dispaly;
     var Apps = db.devices.apps;
+
 
 
     deviceUpdate = (serial, instance, Model, data) => {
@@ -322,8 +322,11 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
                     Promise.all([
                         device.update(data, {logging: false}),
                         deviceUpdate(device.serial, device.phone, Phone, identity.phone),
-                        deviceUpdate(device.serial, device.dispaly, Display, identity.dispaly)
-                    ]).then(() => console.log('Setted device ready successfully!'));
+                        deviceUpdate(device.serial, device.display, Display, identity.display)
+                    ]).then(() => console.log('Setted device identity successfully!'))
+                        .catch(function (err) {
+                            console.log(err)
+                        })
                 } else {
                     throw new Error('There is no such device!');
                 }
@@ -355,6 +358,16 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
         return Devices.findOne({where: {serial: serial}, include: depth2, logging: false})
             .then(result => {
                 return result.get({plain: true})
+            })
+    }
+
+    dbapi.loadUserDevices = function (email) {
+        return Devices.findAll({where: {'$owner.email$': email}, include: depth2, logging: false})
+            .then(result => {
+                for (i in result) {
+                    result[i] = result[i].get({plain: true})
+                }
+                return result
             })
     }
 }
@@ -532,7 +545,7 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
                     }
                     return users;
                 } else {
-                    throw new Error('There is no user for such adbkey!')
+                    return users;
                 }
             })
     }
@@ -540,10 +553,14 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     dbapi.lookupUserByAdbFingerprint = function (fingerprint) {
         return dbapi.lookupUsersByAdbKey(fingerprint)
             .then(users => {
-                if (users.length > 1) {
-                    throw new Error('Found multiple users for same ADB fingerprint');
+                if (users.length < 1) {
+                    if (users.length > 1) {
+                        throw new Error('Found multiple users for same ADB fingerprint');
+                    }
+                    return found[0];
+                } else {
+                    return users;
                 }
-                return found[0];
             })
     }
 }
