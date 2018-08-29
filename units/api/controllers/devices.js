@@ -1,4 +1,4 @@
-const dbapi = require('../../../db/api');
+const dbapi = require('../../../db/index');
 const logger = require('../../../util/logger');
 const datautil = require('../../../util/datautil');
 
@@ -7,8 +7,7 @@ const log = logger.createLogger('api:controllers:devices');
 module.exports = {
     'GET /api/devices': async(ctx, next) => {
         try {
-            let cursor = await dbapi.loadDevices();
-            let list = await cursor.toArray();
+            let list = await dbapi.loadDevices();
             let deviceList = [];
             list.forEach(function (device) {
                 datautil.normalize(device, ctx.user);

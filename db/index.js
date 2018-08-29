@@ -1,4 +1,4 @@
-//var db = (require('./setup'))();
+var db = (require('./setup'))();
 var dbapi = Object.create(null);
 //const Op = require('sequelize').Op;
 var Promise = require('bluebird');

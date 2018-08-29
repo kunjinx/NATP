@@ -4,13 +4,11 @@ const logger = require('../../util/logger');
 const wire = require('../../wire/index');
 const wirerouter = require('../../wire/router');
 const wireutil = require('../../wire/util');
-//const db = require('../../db/index')
-//const dbapi = require('../../db/api')
+const dbapi = require('../../db/index')
 const lifecycle = require('../../util/lifecycle');
 const srv = require('../../util/srv');
 const zmqutil = require('../../util/zmqutil');
 
-//module.exports = db.ensureConnectivity(function (options) {
 module.exports = function (options) {
     let log = logger.createLogger('processor');
 
@@ -52,63 +50,65 @@ module.exports = function (options) {
     devDealer.on('message', wirerouter()
     // Initial device message
         .on(wire.DeviceIntroductionMessage, async(channel, message, data) => {
-            /*dbapi.saveDeviceInitialState(message.serial, message)
-             .then(function () {
-             devDealer.send([
-             message.provider.channel
-             , wireutil.envelope(new wire.DeviceRegisteredMessage(
-             message.serial
-             ))
-             ])
-             pub.send([channel, data])
-             })*/
-            devDealer.send([
-                message.provider.channel
-                , wireutil.envelope(new wire.DeviceRegisteredMessage(
-                    message.serial
-                ))
-            ]);
-            pub.send([channel, data]);
+            try {
+                await dbapi.saveDeviceInitialState(message.serial, message);
+                devDealer.send([
+                    message.provider.channel
+                    , wireutil.envelope(new wire.DeviceRegisteredMessage(
+                        message.serial
+                    ))
+                ]);
+                pub.send([channel, data]);
+            } catch (err) {
+                log.error('saveDeviceInitialState failed:', message)
+            }
             log.info('DeviceIntroductionMessage:', message.serial)
         })
         // Workerless messages
-        .on(wire.DevicePresentMessage, function (channel, message, data) {
-            //dbapi.setDevicePresent(message.serial)
+        .on(wire.DevicePresentMessage, async(channel, message, data) => {
+            try {
+                dbapi.setDevicePresent(message.serial);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDevicePresent failed:', message)
+            }
             log.info('DevicePresentMessage', message.serial);
-            pub.send([channel, data])
         })
-        .on(wire.DeviceAbsentMessage, function (channel, message, data) {
-            //dbapi.setDeviceAbsent(message.serial)
+        .on(wire.DeviceAbsentMessage, async(channel, message, data) => {
+            try {
+                dbapi.setDeviceAbsent(message.serial);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceAbsent failed:', message)
+            }
             log.info('DeviceAbsentMessage', message.serial);
-            pub.send([channel, data])
         })
-        .on(wire.DeviceStatusMessage, function (channel, message, data) {
-            //dbapi.saveDeviceStatus(message.serial, message.status)
+        .on(wire.DeviceStatusMessage, async(channel, message, data) => {
+            try {
+                dbapi.saveDeviceStatus(message.serial, message.status);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('saveDeviceStatus failed:', message)
+            }
             log.info('DeviceStatusMessage', message.serial, message.status);
-            pub.send([channel, data])
+
         })
         .on(wire.DeviceHeartbeatMessage, function (channel, message, data) {
             pub.send([channel, data])
         })
         // Worker initialized
-        .on(wire.DeviceReadyMessage, function (channel, message, data) {
-            /* dbapi.setDeviceReady(message.serial, message.channel)
-             .then(function () {
-             devDealer.send([
-             message.channel
-             , wireutil.envelope(new wire.ProbeMessage())
-             ])
-
-             pub.send([channel, data])
-             })*/
-            devDealer.send([
-                message.channel
-                , wireutil.envelope(new wire.ProbeMessage())
-            ]);
-
+        .on(wire.DeviceReadyMessage, async(channel, message, data) => {
+            try {
+                await dbapi.setDeviceReady(message.serial, message.channel);
+                devDealer.send([
+                    message.channel
+                    , wireutil.envelope(new wire.ProbeMessage())
+                ]);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceReady failed:', message)
+            }
             log.info('DeviceReadyMessage', message.serial);
-
-            pub.send([channel, data])
         })
         // Worker messages
         /*.on(wire.JoinGroupByAdbFingerprintMessage, function (channel, message) {
@@ -180,37 +180,62 @@ module.exports = function (options) {
          )
          })
          })*/
-        .on(wire.ConnectStartedMessage, function (channel, message, data) {
+        .on(wire.ConnectStartedMessage, async(channel, message, data) => {
             //dbapi.setDeviceConnectUrl(message.serial, message.url)
+            try {
+                dbapi.setDeviceConnectUrl(message.serial, message.url);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceConnectUrl failed:', message)
+            }
             log.info('ConnectStartedMessage', message.serial, message.url);
-            pub.send([channel, data])
         })
-        .on(wire.ConnectStoppedMessage, function (channel, message, data) {
+        .on(wire.ConnectStoppedMessage, async(channel, message, data) => {
             //dbapi.unsetDeviceConnectUrl(message.serial)
+            try {
+                dbapi.unsetDeviceConnectUrl(message.serial);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('unsetDeviceConnectUrl failed:', message)
+            }
             log.info('ConnectStoppedMessage', message.serial);
-            pub.send([channel, data])
         })
-        .on(wire.JoinGroupMessage, function (channel, message, data) {
-            /*dbapi.setDeviceOwner(message.serial, message.owner)
-             if (message.usage) {
-             dbapi.setDeviceUsage(message.serial, message.usage)
-             }*/
+        .on(wire.JoinGroupMessage, async(channel, message, data) => {
+            try {
+                dbapi.setDeviceOwner(message.serial, message.owner);
+                if (message.usage) {
+                    dbapi.setDeviceUsage(message.serial, message.usage)
+                }
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceOwner or setDeviceUsage failed:', message)
+            }
             log.info('JoinGropMessage', message);
-            pub.send([channel, data])
         })
-        .on(wire.LeaveGroupMessage, function (channel, message, data) {
+        .on(wire.LeaveGroupMessage, async function (channel, message, data) {
             /*dbapi.unsetDeviceOwner(message.serial, message.owner)
              dbapi.unsetDeviceUsage(message.serial)*/
             log.info('LeaveGroupMessage', message);
-            pub.send([channel, data])
+            try {
+                dbapi.unsetDeviceOwner(message.serial, message.owner);
+                dbapi.unsetDeviceUsage(message.serial);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('unsetDeviceConnectUrl failed:', message)
+            }
         })
         .on(wire.DeviceLogMessage, function (channel, message, data) {
             pub.send([channel, data])
         })
-        .on(wire.DeviceIdentityMessage, function (channel, message, data) {
+        .on(wire.DeviceIdentityMessage, async function (channel, message, data) {
             //dbapi.saveDeviceIdentity(message.serial, message)
             log.info('DeviceIdentityMessage', message);
-            pub.send([channel, data])
+            try {
+                dbapi.saveDeviceIdentity(message.serial, message);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('saveDeviceIdentity failed:', message)
+            }
         })
         .on(wire.TransactionProgressMessage, function (channel, message, data) {
             pub.send([channel, data])
@@ -221,40 +246,74 @@ module.exports = function (options) {
         .on(wire.DeviceLogcatEntryMessage, function (channel, message, data) {
             pub.send([channel, data])
         })
-        .on(wire.AirplaneModeEvent, function (channel, message, data) {
+        .on(wire.AirplaneModeEvent, async function (channel, message, data) {
             //dbapi.setDeviceAirplaneMode(message.serial, message.enabled)
             log.info('AirplaneModeEvent', message);
-            pub.send([channel, data])
+            try {
+                dbapi.setDeviceAirplaneMode(message.serial, message.enabled);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceAirplaneMode failed:', message)
+            }
         })
-        .on(wire.BatteryEvent, function (channel, message, data) {
+        .on(wire.BatteryEvent, async function (channel, message, data) {
             //dbapi.setDeviceBattery(message.serial, message)
             log.info('BatteryEvent', message);
-            pub.send([channel, data])
+            try {
+                dbapi.setDeviceBattery(message.serial, message);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceBattery failed:', message)
+            }
         })
-        .on(wire.DeviceBrowserMessage, function (channel, message, data) {
+        .on(wire.DeviceBrowserMessage, async function (channel, message, data) {
             //dbapi.setDeviceBrowser(message.serial, message)
             log.info('DeviceBrowsermessage', message);
-            pub.send([channel, data])
+            try {
+                dbapi.setDeviceBrowser(message.serial, message);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceBrowser failed:', message)
+            }
         })
-        .on(wire.ConnectivityEvent, function (channel, message, data) {
+        .on(wire.ConnectivityEvent, async function (channel, message, data) {
             //dbapi.setDeviceConnectivity(message.serial, message)
             log.info('ConnectivityEvent', message);
-            pub.send([channel, data])
+            try {
+                dbapi.setDeviceConnectivity(message.serial, message);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceConnectivity failed:', message)
+            }
         })
-        .on(wire.PhoneStateEvent, function (channel, message, data) {
+        .on(wire.PhoneStateEvent, async function (channel, message, data) {
             //dbapi.setDevicePhoneState(message.serial, message)
             log.info('PhoneStateEvent', message);
-            pub.send([channel, data])
+            try {
+                dbapi.setDevicePhoneState(message.serial, message);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDevicePhoneState failed:', message)
+            }
         })
-        .on(wire.RotationEvent, function (channel, message, data) {
+        .on(wire.RotationEvent, async function (channel, message, data) {
             //dbapi.setDeviceRotation(message.serial, message.rotation)
             log.info('RotationEvent', message);
-            pub.send([channel, data])
+            try {
+                dbapi.setDeviceRotation(message.serial, message.rotation);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceRotation failed:', message)
+            }
         })
-        .on(wire.ReverseForwardsEvent, function (channel, message, data) {
-            //dbapi.setDeviceReverseForwards(message.serial, message.forwards)
+        .on(wire.ReverseForwardsEvent, async function (channel, message, data) {
             log.info('ReverseForwardsEvent', message);
-            pub.send([channel, data])
+            try {
+                dbapi.setDeviceReverseForwards(message.serial, message.forwards);
+                pub.send([channel, data])
+            } catch (err) {
+                log.error('setDeviceReverseForwards failed:', message)
+            }
         })
         .handler());
 

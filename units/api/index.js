@@ -12,10 +12,12 @@ const lifecycle = require('../../util/lifecycle');
 const wireutil = require('../../wire/util');
 const rest = require('./middleware/rest');
 const controller = require('./middleware/controller');
+const db = require('../../db/setup');
 
 module.exports = function (options) {
     let log = logger.createLogger('api');
     let app = new koa();
+    //db().initialTables();
     let channelRouter = new events.EventEmitter();
 
     let push = zmqutil.socket('push');
@@ -67,7 +69,7 @@ module.exports = function (options) {
             push: push
             , sub: sub
             , channelRouter: channelRouter
-        })
+        });
 
         ctx.options = reqOptions;
         await next()

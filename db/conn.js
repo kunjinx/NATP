@@ -1,7 +1,7 @@
 module.exports = {
-    dbname: "sequelizetest",
+    dbname: "test",
     user: "root",
-    pwd: "8257226",
+    pwd: "password",
     options: {
         host: "localhost",
         dialect: "mysql",
