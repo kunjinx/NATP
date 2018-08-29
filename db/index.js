@@ -18,7 +18,6 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
     var Display = db.devices.display;
     var ReverseForwards = db.devices.reverseForwards;
     var Phone = db.devices.phone;
-    var Display = db.devices.dispaly;
     var Apps = db.devices.apps;
 
 
@@ -323,8 +322,11 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
                     Promise.all([
                         device.update(data, { logging: false }),
                         deviceUpdate(device.serial, device.phone, Phone, identity.phone),
-                        deviceUpdate(device.serial, device.dispaly, Display, identity.dispaly)
-                    ]).then(() => console.log('Setted device ready successfully!'));
+                        deviceUpdate(device.serial, device.display, Display, identity.display)
+                    ]).then(() => console.log('Setted device identity successfully!'))
+                        .catch(function (err) {
+                            console.log(err)
+                        })
                 } else {
                     throw new Error('There is no such device!');
                 }
@@ -362,6 +364,16 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
             .then(result => {
                 for (i in result) {
                     result[i] = result[i].get({ plain: true })
+                }
+                return result
+            })
+    }
+
+    dbapi.loadUserDevices = function (email) {
+        return Devices.findAll({where: {'$owner.email$': email}, include: depth2, logging: false})
+            .then(result => {
+                for (i in result) {
+                    result[i] = result[i].get({plain: true})
                 }
                 return result
             })
