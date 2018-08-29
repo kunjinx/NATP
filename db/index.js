@@ -1,11 +1,11 @@
 var db = (require('./setup'))();
 var dbapi = Object.create(null);
-//const Op = require('sequelize').Op;
+const Op = require('sequelize').Op;
 var Promise = require('bluebird');
 
-var depth1 = [{all: true}];
-var depth2 = [{all: true, include: [{all: true}]}];
-var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
+var depth1 = [{ all: true }];
+var depth2 = [{ all: true, include: [{ all: true }] }];
+var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
 
 //dbapi.devices
 {
@@ -22,29 +22,30 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     var Apps = db.devices.apps;
 
 
+
     deviceUpdate = (serial, instance, Model, data) => {
         if (instance) {
-            return instance.update(data, {logging: false});
+            return instance.update(data, { logging: false });
         } else {
             data.serial = serial;
-            return Model.create(data, {logging: false});
+            return Model.create(data, { logging: false });
         }
     }
 
     deviceUpdateArray = (serial, instanceArray, Model, dataArray) => {
         if (instanceArray.length > 0) {
-            return Model.destroy({where: {serial: serial}, logging: false})
+            return Model.destroy({ where: { serial: serial }, logging: false })
                 .then(() => {
                     for (i in dataArray) {
                         dataArray[i].serial = serial;
                     }
-                    return Model.bulkCreate(dataArray, {logging: false});
+                    return Model.bulkCreate(dataArray, { logging: false });
                 })
         } else {
             for (i in dataArray) {
                 dataArray[i].serial = serial;
             }
-            return Model.bulkCreate(dataArray, {logging: false});
+            return Model.bulkCreate(dataArray, { logging: false });
         }
     }
 
@@ -59,16 +60,16 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
             , remoteConnectUrl: null
             , usage: null
         }
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
                     Promise.all([
-                        device.update(data, {logging: false}),
+                        device.update(data, { logging: false }),
                         (function () {
                             return deviceUpdate(device.serial, device.provider, Provider, devicedata.provider)
                         })(),
                         (function () {
-                            return Owner.destroy({where: {serial: device.serial}, logging: false})
+                            return Owner.destroy({ where: { serial: device.serial }, logging: false })
                         })(),
                         (function () {
                             return deviceUpdateArray(device.serial, device.reverseForwards, ReverseForwards, [])
@@ -78,7 +79,7 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
                     data.serial = serial;
                     data.provider = devicedata.provider;
                     return Devices.create(data, {
-                        logging: false, include: [{all: true, include: depth1}]
+                        logging: false, include: [{ all: true, include: depth1 }]
                     })
                         .then(() => console.log('Created user data successfully!'));
                 }
@@ -86,10 +87,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceConnectUrl = function (serial, url) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({remoteConnectUrl: url, remoteConnect: true}, {logging: false})
+                    return device.update({ remoteConnectUrl: url, remoteConnect: true }, { logging: false })
                         .then(() => console.log('Setted device connect URL successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -98,10 +99,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.unsetDeviceConnectUrl = function (serial) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({remoteConnectUrl: null, remoteConnect: false}, {logging: false})
+                    return device.update({ remoteConnectUrl: null, remoteConnect: false }, { logging: false })
                         .then(() => console.log('Unsetted device connect URL successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -110,10 +111,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.saveDeviceStatus = function (serial, status) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({status: status, statusChangedAt: new Date()}, {logging: false})
+                    return device.update({ status: status, statusChangedAt: new Date() }, { logging: false })
                         .then(() => console.log('Saved device status successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -122,7 +123,7 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceOwner = function (serial, owner) {
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
                     return deviceUpdate(device.serial, device.owner, Owner, owner)
@@ -134,10 +135,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.unsetDeviceOwner = function (serial) {
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
-                    return Owner.destroy({where: {serial: device.serial}, logging: false})
+                    return Owner.destroy({ where: { serial: device.serial }, logging: false })
                         .then(() => console.log('Unsetted device owner successfully!'))
                 } else {
                     throw new Error('There is no such device!');
@@ -146,10 +147,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDevicePresent = function (serial) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({present: true, presenceChangedAt: new Date()}, {logging: false})
+                    return device.update({ present: true, presenceChangedAt: new Date() }, { logging: false })
                         .then(() => console.log('Setted device present successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -158,10 +159,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceAbsent = function (serial) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({present: false, presenceChangedAt: new Date()}, {logging: false})
+                    return device.update({ present: false, presenceChangedAt: new Date() }, { logging: false })
                         .then(() => console.log('Unsetted device present successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -170,10 +171,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceUsage = function (serial, usage) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({usage: usage, usageChangedAt: new Date()}, {logging: false})
+                    return device.update({ usage: usage, usageChangedAt: new Date() }, { logging: false })
                         .then(() => console.log('Setted device usage successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -182,10 +183,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.unsetDeviceUsage = function (serial) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({usage: null, usageChangedAt: new Date()}, {logging: false})
+                    return device.update({ usage: null, usageChangedAt: new Date() }, { logging: false })
                         .then(() => console.log('Unsetted device usage successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -194,10 +195,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceAirplaneMode = function (serial, enabled) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({airplaneMode: enabled}, {logging: false})
+                    return device.update({ airplaneMode: enabled }, { logging: false })
                         .then(() => console.log('Setted device airplane mode successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -206,7 +207,7 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceBattery = function (serial, battery) {
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
                     return deviceUpdate(device.serial, device.battery, Battery, battery)
@@ -218,11 +219,11 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceBrowser = function (serial, browser) {
-        return Devices.findOne({where: {serial: serial}, include: depth2, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth2, logging: false })
             .then(device => {
                 if (device) {
                     return deviceUpdate(device.serial, device.browser, Browser, browser)
-                        .then(() => device.reload({include: [{all: true, include: [{all: true}]}], logging: false}))
+                        .then(() => device.reload({ include: [{ all: true, include: [{ all: true }] }], logging: false }))
                         .then(() => deviceUpdateArray(device.serial, device.browser.apps, Apps, browser.apps))
                         .then(() => console.log('Setted device browser successfully!'))
                 } else {
@@ -232,7 +233,7 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceConnectivity = function (serial, connectivity) {
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
                     return deviceUpdate(device.serial, device.network, Network, connectivity)
@@ -244,10 +245,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceRotation = function (serial, rotation) {
-        return Display.findOne({where: {serial: serial}, logging: false})
+        return Display.findOne({ where: { serial: serial }, logging: false })
             .then(display => {
                 if (display) {
-                    display.update({rotation: rotation}, {logging: false})
+                    display.update({ rotation: rotation }, { logging: false })
                         .then(() => console.log('Setted device rotation successfully!'))
                 } else {
                     throw new Error('There is no data for such device!')
@@ -256,10 +257,10 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceNote = function (serial, note) {
-        return Devices.findOne({where: {serial: serial}, logging: false})
+        return Devices.findOne({ where: { serial: serial }, logging: false })
             .then(device => {
                 if (device) {
-                    return device.update({notes: note}, {logging: false})
+                    return device.update({ notes: note }, { logging: false })
                         .then(() => console.log('Setted device note successfully!'));
                 } else {
                     throw new Error('There is no such device!');
@@ -269,9 +270,9 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
 
     dbapi.setDeviceReverseForwards = function (serial, forwards) {
         for (i in forwards) {
-            forwards[i] = {forwards: forwards[i]}
+            forwards[i] = { forwards: forwards[i] }
         }
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
                     return deviceUpdateArray(device.serial, device.reverseForwards, ReverseForwards, forwards)
@@ -283,14 +284,14 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.setDeviceReady = function (serial, channel) {
-        var data = {channel: channel, ready: true};
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        var data = { channel: channel, ready: true };
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
                     return Promise.all([
-                        device.update(data, {logging: false}),
+                        device.update(data, { logging: false }),
                         (function () {
-                            return Owner.destroy({where: {serial: device.serial}, logging: false})
+                            return Owner.destroy({ where: { serial: device.serial }, logging: false })
                         })(),
                         (function () {
                             return deviceUpdateArray(device.serial, device.reverseForwards, ReverseForwards, [])
@@ -316,11 +317,11 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
             , cpuPlatform: identity.cpuPlatform
             , openGLESVersion: identity.openGLESVersion
         }
-        return Devices.findOne({where: {serial: serial}, include: depth1, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth1, logging: false })
             .then(device => {
                 if (device) {
                     Promise.all([
-                        device.update(data, {logging: false}),
+                        device.update(data, { logging: false }),
                         deviceUpdate(device.serial, device.phone, Phone, identity.phone),
                         deviceUpdate(device.serial, device.dispaly, Display, identity.dispaly)
                     ]).then(() => console.log('Setted device ready successfully!'));
@@ -332,29 +333,37 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
 
 
     dbapi.loadDevices = function () {
-        return Devices.findAll({include: depth2})
+        return Devices.findAll({ include: depth2 })
             .then(result => {
                 for (i in result) {
-                    result[i] = result[i].get({plain: true})
+                    result[i] = result[i].get({ plain: true })
                 }
                 return result
             })
     }
 
     dbapi.loadPresentDevices = function () {
-        return Devices.findAll({where: {present: true, include: depth2}, logging: false})
+        return Devices.findAll({ where: { present: true, include: depth2 }, logging: false })
             .then(result => {
                 for (i in result) {
-                    result[i] = result[i].get({plain: true})
+                    result[i] = result[i].get({ plain: true })
                 }
                 return result
             })
     }
 
     dbapi.loadDevice = function (serial) {
-        return Devices.findOne({where: {serial: serial}, include: depth2, logging: false})
+        return Devices.findOne({ where: { serial: serial }, include: depth2, logging: false })
+            .then(result => { return result.get({ plain: true }) })
+    }
+
+    dbapi.loadUserDevices = function (email) {
+        return Devices.findAll({ where: { '$owner.email$': email }, include: depth2, logging: false })
             .then(result => {
-                return result.get({plain: true})
+                for (i in result) {
+                    result[i] = result[i].get({ plain: true })
+                }
+                return result
             })
     }
 }
@@ -371,39 +380,39 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
 
     userUpdate = (email, instance, Model, data) => {
         if (instance) {
-            return instance.update(data, {logging: false});
+            return instance.update(data, { logging: false });
         } else {
             data.email = email;
-            return Model.create(data, {logging: false});
+            return Model.create(data, { logging: false });
         }
     }
 
     userUpdateArray = (email, instanceArray, Model, dataArray) => {
         if (instanceArray.length > 0) {
-            return Model.destroy({where: {email: email}, logging: false})
+            return Model.destroy({ where: { email: email }, logging: false })
                 .then(() => {
                     for (i in dataArray) {
                         dataArray[i].email = email;
                     }
-                    return Model.bulkCreate(dataArray, {logging: false});
+                    return Model.bulkCreate(dataArray, { logging: false });
                 })
         } else {
             for (i in dataArray) {
                 dataArray[i].email = email;
             }
-            return Model.bulkCreate(dataArray, {logging: false});
+            return Model.bulkCreate(dataArray, { logging: false });
         }
     }
 
     dbapi.saveUserAfterLogin = function (userdata) {
-        return Users.findOne({where: {email: userdata.email}, logging: false})
+        return Users.findOne({ where: { email: userdata.email }, logging: false })
             .then(user => {
                 if (user) {
                     return user.update({
                         name: userdata.name,
                         ip: userdata.ip,
                         lastLoggedInAt: new Date(),
-                    }, {logging: false})
+                    }, { logging: false })
                         .then(() => console.log('Updated user data successfully!'));
                 } else {
                     return Users.create({
@@ -414,7 +423,7 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
                         settings: {
                             deviceListSort: {}
                         }
-                    }, {logging: false, include: depth3})
+                    }, { logging: false, include: depth3 })
                         .then(() => console.log('Created user data successfully!'));
                 }
             })
@@ -422,14 +431,14 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
 
     dbapi.loadUser = function (email) {
         return Users.findOne({
-            where: {email: email}
+            where: { email: email }
             , logging: false, include: depth3
         })
             .then(found => {
                 if (found) {
                     console.log('Found user data successfully!');
-                    found = found.get({plain: true})
-                    return found.get({plain: true});
+                    found = found.get({ plain: true })
+                    return found.get({ plain: true });
                 } else {
                     throw new Error('There is no such user existed!');
 
@@ -438,21 +447,17 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.updateUserSettings = function (email, changes) {
-        return Users.findOne({where: {email: email}, logging: false, include: depth3})
+        return Users.findOne({ where: { email: email }, logging: false, include: depth3 })
             .then(user => {
                 if (user) {
-                    user.settings.update(changes, {logging: false})
-                        .then(() => {
-                            return user.settings.reload({logging: false})
-                        })
+                    user.settings.update(changes, { logging: false })
+                        .then(() => { return user.settings.reload({ logging: false }) })
                         .then(() =>
                             Promise.all([
                                 userUpdate(user.email, user.settings.deviceListActiveTabs, DeviceListActiveTabs, changes.deviceListActiveTabs),
                                 userUpdateArray(user.email, user.settings.deviceListColumns, DeviceListColumns, changes.deviceListColumns),
                                 userUpdate(user.email, user.settings.deviceListSort, DeviceListSort, changes.deviceListSort)
-                                    .then(() => {
-                                        return user.settings.deviceListSort.reload({logging: false})
-                                    })
+                                    .then(() => { return user.settings.deviceListSort.reload({ logging: false }) })
                                     .then(() => {
                                         Promise.all([
                                             userUpdateArray(user.email, user.settings.deviceListSort.fixed, Fixed, changes.deviceListSort.fixed),
@@ -469,16 +474,16 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.resetUserSettings = function (email) {
-        return Users.findOne({where: {email: email}, logging: false, include: depth1})
+        return Users.findOne({ where: { email: email }, logging: false, include: depth1 })
             .then(user => {
                 if (user) {
                     console.log('Found user data successfully!');
                     var reset = {
                         deviceListSort: {}
                     }
-                    var set = Settings.build(reset, {include: depth2});
-                    user.settings.destroy({logging: false})
-                        .then(() => user.setSettings(set, {logging: false}))
+                    var set = Settings.build(reset, { include: depth2 });
+                    user.settings.destroy({ logging: false })
+                        .then(() => user.setSettings(set, { logging: false }))
                         .then(() => console.log('Reseted user settings successfully!'))
                 } else {
                     throw new Error('There is no any data for such user!');
@@ -487,14 +492,14 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.insertUserAdbKey = function (email, key) {
-        return Users.findOne({where: {email: email}, logging: false, include: depth1})
+        return Users.findOne({ where: { email: email }, logging: false, include: depth1 })
             .then((user) => {
                 if (user) {
                     return AdbKeys.create({
                         email: email,
                         fingerprint: key.fingerprint,
                         title: key.title
-                    }, {logging: false})
+                    }, { logging: false })
                         .then(() => console.log('Inserted user adbkey successfully!'))
                 } else {
                     throw new Error('There is no any data for such user!');
@@ -504,14 +509,14 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
 
 
     dbapi.deleteUserAdbKey = function (email, fingerprint) {
-        return Users.findOne({where: {email: email}, logging: false, include: depth1})
+        return Users.findOne({ where: { email: email }, logging: false, include: depth1 })
             .then((user) => {
                 if (user) {
-                    AdbKeys.findOne({where: {email: email, fingerprint: fingerprint}, logging: false})
+                    AdbKeys.findOne({ where: { email: email, fingerprint: fingerprint }, logging: false })
                         .then(adbkey => {
                             if (adbkey) {
                                 console.log('Found adbkey successfully!');
-                                return adbkey.destroy({logging: false}).then(() => console.log('Deleted adbkey successfully!'));
+                                return adbkey.destroy({ logging: false }).then(() => console.log('Deleted adbkey successfully!'));
                             } else {
                                 throw new Error('There is no such adbkey');
                             }
@@ -523,16 +528,16 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     }
 
     dbapi.lookupUsersByAdbKey = function (fingerprint) {
-        return AdbKeys.findAll({where: {fingerprint: fingerprint}, logging: false})
+        return AdbKeys.findAll({ where: { fingerprint: fingerprint }, logging: false })
             .then(users => {
                 if (users) {
                     console.log('Found adbkeys successfully!');
                     for (i in users) {
-                        users[i] = users[i].get({plain: true})
+                        users[i] = users[i].get({ plain: true })
                     }
                     return users;
                 } else {
-                    throw new Error('There is no user for such adbkey!')
+                    return users;
                 }
             })
     }
@@ -540,10 +545,14 @@ var depth3 = [{all: true, include: [{all: true, include: [{all: true}]}]}]
     dbapi.lookupUserByAdbFingerprint = function (fingerprint) {
         return dbapi.lookupUsersByAdbKey(fingerprint)
             .then(users => {
-                if (users.length > 1) {
-                    throw new Error('Found multiple users for same ADB fingerprint');
+                if (users.length < 1) {
+                    if (users.length > 1) {
+                        throw new Error('Found multiple users for same ADB fingerprint');
+                    }
+                    return found[0];
+                } else {
+                    return users;
                 }
-                return found[0];
             })
     }
 }
