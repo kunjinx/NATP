@@ -360,10 +360,10 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
     }
 
     dbapi.loadUserDevices = function (email) {
-        return Devices.findAll({ where: { '$owner.email$': email }, include: depth2, logging: false })
+        return Devices.findAll({where: {'$owner.email$': email}, include: depth2, logging: false})
             .then(result => {
                 for (i in result) {
-                    result[i] = result[i].get({ plain: true })
+                    result[i] = result[i].get({plain: true})
                 }
                 return result
             })
