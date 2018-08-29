@@ -224,7 +224,7 @@ module.exports = function (options) {
         .on(wire.DeviceIdentityMessage, async function (channel, message, data) {
             log.info('DeviceIdentityMessage', message);
             try {
-                await dbapi.saveDeviceIdentity(message.serial, message);
+                dbapi.saveDeviceIdentity(message.serial, message);
                 pub.send([channel, data])
             } catch (err) {
                 log.error('saveDeviceIdentity failed:', message)
