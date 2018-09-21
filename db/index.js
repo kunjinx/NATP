@@ -3,9 +3,17 @@ var dbapi = Object.create(null);
 const Op = require('sequelize').Op;
 var Promise = require('bluebird');
 
+
+
 var depth1 = [{ all: true }];
 var depth2 = [{ all: true, include: [{ all: true }] }];
 var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
+
+/**
+ * @author mvlin
+ * @Date 2018-9-20
+ * @Version 0.50
+ */
 
 //dbapi.devices
 {
@@ -376,7 +384,7 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
     }
 
     dbapi.loadUserDevices = function (email) {
-        return Devices.findAll({where: {'$owner.email$': email}, include: depth2, logging: false})
+        return Devices.findAll({ where: { '$owner.email$': email }, include: depth2, logging: false })
             .then(result => {
                 if (result.length > 1) {
                     for (i in result) {
@@ -431,7 +439,7 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
                     return user.update({
                         name: userdata.name,
                         ip: userdata.ip,
-                        lastLoggedInAt: new Date(),
+                        lastLoggedInAt: new Date()
                     }, { logging: false })
                         .then(() => console.log('Updated user data successfully!'));
                 } else {
@@ -457,106 +465,104 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
             .then(found => {
                 if (found) {
                     console.log('Found user data successfully!');
-                    found = found.get({ plain: true })
                     return found.get({ plain: true });
                 } else {
                     return found
                 }
             });
+
     }
 
-    dbapi.updateUserSettings = function (email, changes) {
-        return Users.findOne({ where: { email: email }, logging: false, include: depth3 })
-            .then(user => {
-                if (user) {
-                    user.settings.update(changes, { logging: false })
-                        .then(() => { return user.settings.reload({ logging: false }) })
-                        .then(() =>
-                            Promise.all([
-                                userUpdate(user.email, user.settings.deviceListActiveTabs, DeviceListActiveTabs, changes.deviceListActiveTabs),
-                                userUpdateArray(user.email, user.settings.deviceListColumns, DeviceListColumns, changes.deviceListColumns),
-                                userUpdate(user.email, user.settings.deviceListSort, DeviceListSort, changes.deviceListSort)
-                                    .then(() => { return user.settings.deviceListSort.reload({ logging: false }) })
-                                    .then(() => {
-                                        Promise.all([
-                                            userUpdateArray(user.email, user.settings.deviceListSort.fixed, Fixed, changes.deviceListSort.fixed),
-                                            userUpdateArray(user.email, user.settings.deviceListSort.user, User, changes.deviceListSort.user)
-                                        ])
-                                    })
-                            ])
-                                .then(() => console.log('Updated user settings successfully!'))
-                        )
-                } else {
-                    throw new Error('There is no any data for such user!');
-                }
-            });
+
+    dbapi.updateUserSettings = async function (email, changes) {
+        var user = await Users.findOne({ where: { email: email }, logging: false, include: depth3 })
+        if (user) {
+            await Promise.all([
+                user.settings.update({ lastUsedDevice: changes.lastUsedDevice, selectedLanguage: changes.selectedLanguage }, { logging: false }),
+                userUpdate(user.email, user.settings.deviceListActiveTabs, DeviceListActiveTabs, changes.deviceListActiveTabs),
+                userUpdateArray(user.email, user.settings.deviceListColumns, DeviceListColumns, changes.deviceListColumns),
+                userUpdate(user.email, user.settings.deviceListSort, DeviceListSort, { email: email })
+            ])
+            await Promise.all([
+                userUpdateArray(user.email, user.settings.deviceListSort.fixed, Fixed, changes.deviceListSort.fixed),
+                userUpdateArray(user.email, user.settings.deviceListSort.user, User, changes.deviceListSort.user)
+            ])
+            console.log('Updated user settings successfully!')
+            return Promise.resolve()
+        }
+        else {
+            throw new Error('There is no any data for such user!');
+        }
     }
 
-    dbapi.resetUserSettings = function (email) {
-        return Users.findOne({ where: { email: email }, logging: false, include: depth1 })
-            .then(user => {
-                if (user) {
-                    console.log('Found user data successfully!');
-                    var reset = {
-                        deviceListSort: {}
-                    }
-                    var set = Settings.build(reset, { include: depth2 });
-                    user.settings.destroy({ logging: false })
-                        .then(() => user.setSettings(set, { logging: false }))
-                        .then(() => console.log('Reseted user settings successfully!'))
-                } else {
-                    throw new Error('There is no any data for such user!');
-                }
-            })
+
+    dbapi.resetUserSettings = async function (email) {
+        var user = await Users.findOne({ where: { email: email }, logging: false, include: depth1 })
+        if (user) {
+            var reset = {
+                deviceListSort: {}
+            }
+            var set = Settings.build(reset, { include: depth2 })
+            await user.settings.destroy({ logging: false })
+            await user.setSettings(set, { logging: false })
+            console.log('Reseted user settings successfully!')
+            return Promise.resolve()
+        } else {
+            throw new Error('There is no any data for such user!');
+        }
     }
 
     dbapi.insertUserAdbKey = function (email, key) {
         return Users.findOne({ where: { email: email }, logging: false, include: depth1 })
             .then((user) => {
                 if (user) {
-                    return AdbKeys.create({
+                    var data = {
                         email: email,
                         fingerprint: key.fingerprint,
                         title: key.title
-                    }, { logging: false })
-                        .then(() => console.log('Inserted user adbkey successfully!'))
+                    }
+                    if (JSON.stringify(user.adbKeys).indexOf(key.fingerprint) == -1) {
+                        return AdbKeys.create(data, { logging: false })
+                            .then(() => console.log('Inserted user adbkey successfully!'))
+                    } else {
+                        throw new Error('These user already have this adbKey')
+                    }
                 } else {
                     throw new Error('There is no any data for such user!');
                 }
             })
     }
-
-
-    dbapi.deleteUserAdbKey = function (email, fingerprint) {
-        return Users.findOne({ where: { email: email }, logging: false, include: depth1 })
-            .then((user) => {
-                if (user) {
-                    AdbKeys.findOne({ where: { email: email, fingerprint: fingerprint }, logging: false })
-                        .then(adbkey => {
-                            if (adbkey) {
-                                console.log('Found adbkey successfully!');
-                                return adbkey.destroy({ logging: false }).then(() => console.log('Deleted adbkey successfully!'));
-                            } else {
-                                throw new Error('There is no such adbkey');
-                            }
-                        })
-                } else {
-                    throw new Error('There is no any data for such user!')
-                }
-            })
+    dbapi.deleteUserAdbKey = async function (email, fingerprint) {
+        var adbkey = await AdbKeys.findOne({ where: { email: email, fingerprint: fingerprint }, logging: false })
+        if (adbkey) {
+            await adbkey.destroy({ logging: false })
+            console.log('Deleted adbkey successfully!')
+        } else {
+            throw new Error('There is no such adbkey');
+        }
     }
 
-    dbapi.lookupUsersByAdbKey = function (fingerprint) {
-        return AdbKeys.findAll({ where: { fingerprint: fingerprint }, logging: false })
-            .then(users => {
-                if (users) {
-                    console.log('Found adbkeys successfully!');
-                    for (i in users) {
-                        users[i] = users[i].get({ plain: true })
+    dbapi.lookupUsersByAdbKey = async function (fingerprint) {
+        var adbkeys = await AdbKeys.findAll({ where: { fingerprint: fingerprint }, logging: false })
+        var emails = []
+        if (adbkeys) {
+            for (i in adbkeys) {
+                emails.push(adbkeys[i].email)
+            }
+            var users = await Users.findAll({
+                where: {
+                    email: {
+                        [Op.or]: emails
                     }
                 }
-                return users;
+                , logging: false
+                , include: depth3
             })
+            for (i in users){
+                users[i]=users[i].get({ plain: true })
+            }
+            return Promise.resolve(users)
+        }
     }
 
     dbapi.lookupUserByAdbFingerprint = function (fingerprint) {
@@ -566,9 +572,34 @@ var depth3 = [{ all: true, include: [{ all: true, include: [{ all: true }] }] }]
                     if (users.length > 1) {
                         throw new Error('Found multiple users for same ADB fingerprint');
                     }
-                    return found[0];
+                    return users[0];
                 } else {
                     return users;
+                }
+            })
+    }
+
+    dbapi.getUserPassword = function (email) {
+        return dbapi.Users.findOne({ where: { email: email }, logging: false })
+            .then(user => {
+                if (user) {
+                    return user.password
+                } else {
+                    return null
+                }
+            })
+    }
+
+    dbapi.setUserPassword = function (email, password) {
+        return dbapi.Users.findOne({ where: { email: email }, logging: false })
+            .then(user => {
+                if (user) {
+                    return user.update({
+                        password: password
+                    }, { logging: false })
+                        .then(() => console.log('Setted user password successfully!'));
+                } else {
+                    throw new Error('Could not found this user')
                 }
             })
     }
